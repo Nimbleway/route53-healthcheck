@@ -35,9 +35,9 @@ fi
 
 HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
 aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE}
-echo "::set-output name=HEALTH_CHECK_ID::$HEALTH_CHECK_ID"
+#echo "::set-output name=HEALTH_CHECK_ID::$HEALTH_CHECK_ID"
 sed -i 's|<DNS_IDENTIFIER>|'${HEALTH_CHECK_ID}'|' ${CONFIG_FILE}
-cat ${CONFIG_FILE}
+#cat ${CONFIG_FILE}
 #echo "HEALTH_CHECK_ID=$HEALTH_CHECK_ID" >> $GITHUB_ENV
 
-echo $HEALTH_CHECK_ID
+#echo $HEALTH_CHECK_ID

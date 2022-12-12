@@ -2,7 +2,7 @@
 set -e
 #set -x
 #set -v
-${PORT:-443}
+
 # Used in ci/cd pipeline.
 # This script will upsert route53 healthcheck's to support multivalue dns.
 DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
@@ -23,7 +23,7 @@ then
     echo "creating healthe check config for ${LB_IP} and ${DOMAIN}"
     echo "{
         \"IPAddress\": \"${LB_IP}\",
-        \"Port\": ${PORT},
+        \"Port\": ${PORT:-443},
         \"Type\": \"HTTPS\",
         \"ResourcePath\": \"/healthcheck\",
         \"FullyQualifiedDomainName\": \"$DOMAIN\",

@@ -6,7 +6,7 @@ set -e
 # Used in ci/cd pipeline.
 # This script will upsert route53 healthcheck's to support multivalue dns.
 ls
-DOMAIN=`yq '.spec.tls[0].hosts[0]' ${CONFIG_FILE} | grep -v null | grep -v '\-' | head -n 1`
+DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
 echo "DOMAIN $DOMAIN"
 DOMAIN_ESCAPED=`echo $DOMAIN | sed 's/\./-/g'`
 echo "DOMAIN_ESCAPED $DOMAIN_ESCAPED"

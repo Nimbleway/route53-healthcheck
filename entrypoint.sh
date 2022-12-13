@@ -6,16 +6,18 @@ set -e
 # Used in ci/cd pipeline.
 # This script will upsert route53 healthcheck's to support multivalue dns.
 USE_INGRESS="${USE_INGRESS:-true}"
-if [ "$USE_INGRESS" = "true" ]; then
+if [ $USE_INGRESS = true ]; then
+  echo "true"
   DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
 else
+  echo "false"
   DOMAIN=`yq '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' ${CONFIG_FILE} | grep -v 'null' | grep -v '-' | head -n 1`
 fi
 DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
 echo "DOMAIN $DOMAIN"
 DOMAIN_ESCAPED=`echo $DOMAIN | sed 's/\./-/g'`
 echo "DOMAIN_ESCAPED $DOMAIN_ESCAPED"
-if [ "$USE_INGRESS" = "true" ]; then
+if [ $USE_INGRESS = true ]; then
   LB_IP=`kubectl get services --namespace ingress-nginx ingress-nginx-controller --output jsonpath='{.status.loadBalancer.ingress[0].ip}'`
 else
   LB_IP=`kubectl get services --namespace apm --output jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}'`

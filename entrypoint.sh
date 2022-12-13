@@ -5,11 +5,22 @@ set -e
 
 # Used in ci/cd pipeline.
 # This script will upsert route53 healthcheck's to support multivalue dns.
+USE_INGRESS="${USE_INGRESS:-true}"
+if [ "$USE_INGRESS" = "true" ]; then
+  DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
+else
+  DOMAIN=`yq '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' ${CONFIG_FILE} | grep -v 'null' | grep -v '-' | head -n 1`
+fi
 DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
 echo "DOMAIN $DOMAIN"
 DOMAIN_ESCAPED=`echo $DOMAIN | sed 's/\./-/g'`
 echo "DOMAIN_ESCAPED $DOMAIN_ESCAPED"
-LB_IP=`kubectl get services --namespace ingress-nginx ingress-nginx-controller --output jsonpath='{.status.loadBalancer.ingress[0].ip}'`
+if [ "$USE_INGRESS" = "true" ]; then
+  LB_IP=`kubectl get services --namespace ingress-nginx ingress-nginx-controller --output jsonpath='{.status.loadBalancer.ingress[0].ip}'`
+else
+  LB_IP=`kubectl get services --namespace apm --output jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}'`
+fi
+
 echo "LB_IP $LB_IP"
 LB_IP_ESCAPED=`echo $LB_IP | sed 's/\./-/g'`
 echo "LB_IP_ESCAPED $LB_IP_ESCAPED"
@@ -31,12 +42,15 @@ then
         \"FailureThreshold\": 3
     }" > /tmp/request.json
     HEALTH_CHECK_ID=`aws route53 create-health-check --caller-reference ${uniq} --health-check-config file:///tmp/request.json --output json | jq '.HealthCheck.Id'`
+    HCDate=$(date +"%d/%m/%Y_%H:%I:%M")
+    aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Name,Value=${HCDate}
 fi
 
 HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
-aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE}
 #echo "::set-output name=HEALTH_CHECK_ID::$HEALTH_CHECK_ID"
 sed -i 's|<DNS_IDENTIFIER>|'${HEALTH_CHECK_ID}'|' ${CONFIG_FILE}
+
+
 #cat ${CONFIG_FILE}
 #echo "HEALTH_CHECK_ID=$HEALTH_CHECK_ID" >> $GITHUB_ENV
 

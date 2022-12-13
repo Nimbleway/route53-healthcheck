@@ -13,7 +13,7 @@ else
   echo "false"
   DOMAIN=`yq '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '-' | head -n 1`
 fi
-DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
+
 echo "DOMAIN $DOMAIN"
 DOMAIN_ESCAPED=`echo $DOMAIN | sed 's/\./-/g'`
 echo "DOMAIN_ESCAPED $DOMAIN_ESCAPED"

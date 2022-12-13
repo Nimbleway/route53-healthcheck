@@ -46,9 +46,10 @@ then
     CLEAN_HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
     HCDate=$(date +"%d/%m/%Y_%H:%I:%M")
     aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${CLEAN_HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}"
+else
+    CLEAN_HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
 fi
 
-CLEAN_HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
 #echo "::set-output name=HEALTH_CHECK_ID::$HEALTH_CHECK_ID"
 sed -i 's|<DNS_IDENTIFIER>|'${CLEAN_HEALTH_CHECK_ID}'|' ${CONFIG_FILE}
 

@@ -7,10 +7,8 @@ set -e
 # This script will upsert route53 healthcheck's to support multivalue dns.
 USE_INGRESS="${USE_INGRESS:-true}"
 if [ $USE_INGRESS = true ]; then
-  echo "true"
   DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
 else
-  echo "false"
   DOMAIN=`yq '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '-' | head -n 1`
 fi
 
@@ -45,7 +43,7 @@ then
     }" > /tmp/request.json
     HEALTH_CHECK_ID=`aws route53 create-health-check --caller-reference ${uniq} --health-check-config file:///tmp/request.json --output json | jq '.HealthCheck.Id'`
     HCDate=$(date +"%d/%m/%Y_%H:%I:%M")
-    aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Name,Value=${HCDate}
+    aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}"
 fi
 
 HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`

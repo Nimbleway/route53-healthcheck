@@ -6,7 +6,6 @@ set -e
 # Used in ci/cd pipeline.
 # This script will upsert route53 healthcheck's to support multivalue dns.
 USE_INGRESS="${USE_INGRESS:-true}"
-IS_HTTPS="${IS_HTTPS:-true}"
 if [ $USE_INGRESS = true ]; then
   DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
 else

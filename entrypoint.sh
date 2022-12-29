@@ -6,10 +6,18 @@ set -e
 # Used in ci/cd pipeline.
 # This script will upsert route53 healthcheck's to support multivalue dns.
 USE_INGRESS="${USE_INGRESS:-true}"
+IS_HTTPS="${IS_HTTPS:-true}"
 if [ $USE_INGRESS = true ]; then
   DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
 else
   DOMAIN=`yq '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '-' | head -n 1`
+fi
+
+IS_HTTPS="${IS_HTTPS:-true}"
+if [ $IS_HTTPS = true ]; then
+  TYPE="HTTPS"
+else
+  TYPE="HTTP"
 fi
 
 echo "DOMAIN $DOMAIN"
@@ -35,7 +43,7 @@ then
     echo "{
         \"IPAddress\": \"${LB_IP}\",
         \"Port\": ${PORT:-443},
-        \"Type\": \"HTTPS\",
+        \"Type\": \"${TYPE}\",
         \"ResourcePath\": \"/healthcheck\",
         \"FullyQualifiedDomainName\": \"$DOMAIN\",
         \"RequestInterval\": 30,

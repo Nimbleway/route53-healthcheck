@@ -38,6 +38,7 @@ HEALTH_CHECK_ID=`aws route53 list-health-checks --query "HealthChecks[?HealthChe
 
 if [ -z "$HEALTH_CHECK_ID" ]
 then
+ if [ $IS_HTTPS = true ]; then
     echo "creating healthe check config for ${LB_IP} and ${DOMAIN}"
     echo "{
         \"IPAddress\": \"${LB_IP}\",
@@ -52,7 +53,24 @@ then
     HEALTH_CHECK_ID=`aws route53 create-health-check --caller-reference ${uniq} --health-check-config file:///tmp/request.json --output json | jq '.HealthCheck.Id'`
     CLEAN_HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
     HCDate=$(date +"%d/%m/%Y_%H:%I:%M")
-    aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${CLEAN_HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}"
+    aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${CLEAN_HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}" 
+ else
+    echo "creating healthe check config for ${LB_IP} and ${DOMAIN}"
+    echo "{
+        \"IPAddress\": \"${LB_IP}\",
+        \"Port\": ${PORT:-443},
+        \"Type\": \"${TYPE}\",
+        \"ResourcePath\": \"/healthcheck\",
+        \"RequestInterval\": 30,
+        \"FailureThreshold\": 3
+    }" > /tmp/request.json
+    echo ${uniq}
+    HEALTH_CHECK_ID=`aws route53 create-health-check --caller-reference ${uniq} --health-check-config file:///tmp/request.json --output json | jq '.HealthCheck.Id'`
+    CLEAN_HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
+    HCDate=$(date +"%d/%m/%Y_%H:%I:%M")
+    aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${CLEAN_HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}" 
+ fi
+
 else
     CLEAN_HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
 fi

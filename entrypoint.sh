@@ -6,10 +6,11 @@ set -e
 # Used in ci/cd pipeline.
 # This script will upsert route53 healthcheck's to support multivalue dns.
 USE_INGRESS="${USE_INGRESS:-true}"
+NAMESPACE="${NAMESPACE:-apm}"
 if [ $USE_INGRESS = true ]; then
-  DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\-' | head -n 1`
+  DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\---' | head -n 1`
 else
-  DOMAIN=`yq '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '-' | head -n 1`
+  DOMAIN=`yq '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
 fi
 
 IS_HTTPS="${IS_HTTPS:-true}"
@@ -25,7 +26,7 @@ echo "DOMAIN_ESCAPED $DOMAIN_ESCAPED"
 if [ $USE_INGRESS = true ]; then
   LB_IP=`kubectl get services --namespace ingress-nginx ingress-nginx-controller --output jsonpath='{.status.loadBalancer.ingress[0].ip}'`
 else
-  LB_IP=`kubectl get services --namespace apm --output jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}'`
+  LB_IP=`kubectl get services --namespace $NAMESPACE --output jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}'`
 fi
 
 echo "LB_IP $LB_IP"

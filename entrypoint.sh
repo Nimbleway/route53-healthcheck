@@ -29,6 +29,8 @@ else
   LB_IP=`kubectl get services --namespace $NAMESPACE --output jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}'`
 fi
 
+SERVICE_NAME="${SERVICE_NAME:-$DOMAIN_ESCAPED}"
+
 echo "LB_IP $LB_IP"
 LB_IP_ESCAPED=`echo $LB_IP | sed 's/\./-/g'`
 echo "LB_IP_ESCAPED $LB_IP_ESCAPED"
@@ -54,7 +56,7 @@ then
     HEALTH_CHECK_ID=`aws route53 create-health-check --caller-reference ${uniq} --health-check-config file:///tmp/request.json --output json | jq '.HealthCheck.Id'`
     CLEAN_HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
     HCDate=$(date +"%d/%m/%Y_%H:%I:%M")
-    aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${CLEAN_HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}" 
+    aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${CLEAN_HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}" Key=Service,Value="${SERVICE_NAME}"
  else
     echo "creating healthe check config for ${LB_IP} and ${DOMAIN}"
     echo "{
@@ -69,7 +71,7 @@ then
     HEALTH_CHECK_ID=`aws route53 create-health-check --caller-reference ${uniq} --health-check-config file:///tmp/request.json --output json | jq '.HealthCheck.Id'`
     CLEAN_HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
     HCDate=$(date +"%d/%m/%Y_%H:%I:%M")
-    aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${CLEAN_HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}" 
+    aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${CLEAN_HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}" Key=Service,Value="${SERVICE_NAME}"
  fi
 
 else

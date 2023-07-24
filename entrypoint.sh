@@ -8,7 +8,7 @@ set -e
 USE_INGRESS="${USE_INGRESS:-true}"
 NAMESPACE="${NAMESPACE:-apm}"
 
-if [ -z "$PREFIX" ]
+if [ -z "$PREFIX" ]; then
   if [ $USE_INGRESS = true ]; then
     DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\---' | head -n 1`
   else

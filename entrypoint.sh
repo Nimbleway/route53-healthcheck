@@ -9,12 +9,14 @@ USE_INGRESS="${USE_INGRESS:-true}"
 NAMESPACE="${NAMESPACE:-apm}"
 
 if [ -z "$PREFIX" ]; then
+echo "$PREFIX is not set"
   if [ $USE_INGRESS = true ]; then
     DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\---' | head -n 1`
   else
     DOMAIN=`yq '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
   fi
 else
+  echo "$PREFIX is set"
   DOMAIN=`yq $PREFIX "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
 fi
 

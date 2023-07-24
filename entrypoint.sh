@@ -7,10 +7,15 @@ set -e
 # This script will upsert route53 healthcheck's to support multivalue dns.
 USE_INGRESS="${USE_INGRESS:-true}"
 NAMESPACE="${NAMESPACE:-apm}"
-if [ $USE_INGRESS = true ]; then
-  DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\---' | head -n 1`
+
+if [ -z "$PREFIX" ]
+  if [ $USE_INGRESS = true ]; then
+    DOMAIN=`yq '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\---' | head -n 1`
+  else
+    DOMAIN=`yq '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
+  fi
 else
-  DOMAIN=`yq '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
+  DOMAIN=`yq $PREFIX "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
 fi
 
 IS_HTTPS="${IS_HTTPS:-true}"

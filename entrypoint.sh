@@ -33,7 +33,8 @@ echo "DOMAIN_ESCAPED $DOMAIN_ESCAPED"
 if [ $USE_INGRESS = true ]; then
   LB_IP=`kubectl get services --namespace ingress-nginx ingress-nginx-controller --output jsonpath='{.status.loadBalancer.ingress[0].ip}'`
 else
-  LB_IP=`kubectl get services --namespace $NAMESPACE --output jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}'`
+#  LB_IP=`kubectl get services --namespace $NAMESPACE --output jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}'`
+   LB_IP=`kubectl get service/$KUBE_SERVICE_NAME --namespace $NAMESPACE --output jsonpath='{.status.loadBalancer.ingress[0].ip}'`
 fi
 
 SERVICE_NAME="${SERVICE_NAME:-$DOMAIN_ESCAPED}"

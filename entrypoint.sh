@@ -107,4 +107,8 @@ if [ -n "$CONFIG_FILE" ]; then
     sed -i 's|<DNS_IDENTIFIER>|'${CLEAN_HEALTH_CHECK_ID}'|' ${CONFIG_FILE}
 fi
 
+# Debugging output
+echo "HEALTH_CHECK_ID=$CLEAN_HEALTH_CHECK_ID"
+
+# Set the output variable for GitHub Actions
 echo "HEALTH_CHECK_ID=$CLEAN_HEALTH_CHECK_ID" >> $GITHUB_OUTPUT

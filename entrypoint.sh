@@ -7,7 +7,6 @@ set -e
 # This script will upsert route53 healthcheck's to support multivalue dns.
 USE_INGRESS="${USE_INGRESS:-true}"
 NAMESPACE="${NAMESPACE:-apm}"
-RETURN_ID_ONLY="${RETURN_ID_ONLY:-false}"
 
 # If DOMAIN is directly provided, use it instead of extracting from CONFIG_FILE
 if [ -n "$DOMAIN" ]; then
@@ -20,17 +19,20 @@ else
   fi
 
   if [ -z "$PREFIX" ]; then
-    echo "$PREFIX is not set"
+    echo "PREFIX is not set"
     if [ $USE_INGRESS = true ]; then
       DOMAIN=`yq --raw-output '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\---' | head -n 1`
     else
       DOMAIN=`yq --raw-output '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
     fi
   else
-    echo "$PREFIX is set"
+    echo "PREFIX is set"
     DOMAIN=`yq --raw-output $PREFIX "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
   fi
+
+  echo "Using inferred DOMAIN: $DOMAIN"
 fi
+
 
 IS_HTTPS="${IS_HTTPS:-true}"
 if [ $IS_HTTPS = true ]; then
@@ -64,7 +66,7 @@ HEALTH_CHECK_ID=`aws route53 list-health-checks --query "HealthChecks[?HealthChe
 if [ -z "$HEALTH_CHECK_ID" ]
 then
  if [ $IS_HTTPS = true ]; then
-    echo "creating healthe check config for ${LB_IP} and ${DOMAIN}"
+    echo "creating healthcheck config for ${LB_IP} and ${DOMAIN}"
     echo "{
         \"IPAddress\": \"${LB_IP}\",
         \"Port\": ${PORT:-443},
@@ -80,7 +82,7 @@ then
     HCDate=$(date +"%d/%m/%Y_%H:%I:%M")
     aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${CLEAN_HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}" Key=service,Value="${SERVICE_NAME}" Key=env,Value="${ENV}" Key=team,Value="${TEAM}"
  else
-    echo "creating healthe check config for ${LB_IP} and ${DOMAIN}"
+    echo "creating healthcheck config for ${LB_IP} and ${DOMAIN}"
     echo "{
         \"IPAddress\": \"${LB_IP}\",
         \"Port\": ${PORT:-443},
@@ -100,15 +102,9 @@ else
     CLEAN_HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
 fi
 
-# Handle output based on RETURN_ID_ONLY setting
-if [ "$RETURN_ID_ONLY" = "true" ]; then
-  echo "HEALTH_CHECK_ID=$CLEAN_HEALTH_CHECK_ID"
-  echo "::set-output name=HEALTH_CHECK_ID::$CLEAN_HEALTH_CHECK_ID"
-  # For GitHub Actions updated syntax
-  echo "health_check_id=$CLEAN_HEALTH_CHECK_ID" >> $GITHUB_OUTPUT
-else
-  # Only replace in CONFIG_FILE if it's provided
-  if [ -n "$CONFIG_FILE" ]; then
+if [ -n "$CONFIG_FILE" ]; then
+  # Replace <DNS_IDENTIFIER> in the config file with the actual health check ID
     sed -i 's|<DNS_IDENTIFIER>|'${CLEAN_HEALTH_CHECK_ID}'|' ${CONFIG_FILE}
-  fi
 fi
+
+echo "HEALTH_CHECK_ID=$CLEAN_HEALTH_CHECK_ID" >> $GITHUB_OUTPUT

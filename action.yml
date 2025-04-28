@@ -1,6 +1,32 @@
-name: Get Clusters
-description: Get Clusters
+name: Route53 Healthcheck
+description: Create or update AWS Route53 health checks for Kubernetes services
 author: Eyal Halfon
+inputs:
+  CONFIG_FILE:
+    description: 'Path to the Kubernetes config file (either this or DOMAIN must be provided)'
+    required: false
+  DOMAIN:
+    description: 'Domain to create/update health check for (can be used instead of CONFIG_FILE)'
+    required: false
+  RETURN_ID_ONLY:
+    description: 'If true, only return the health check ID without modifying files'
+    required: false
+    default: 'false'
+  USE_INGRESS:
+    description: 'Whether to use Ingress resources (true) or Service resources (false)'
+    required: false
+    default: 'true'
+  NAMESPACE:
+    description: 'Kubernetes namespace'
+    required: false
+    default: 'apm'
+  IS_HTTPS:
+    description: 'Whether to use HTTPS (true) or HTTP (false) for health checks'
+    required: false 
+    default: 'true'
+outputs:
+  HEALTH_CHECK_ID:
+    description: 'The ID of the created or updated Route53 health check'
 runs:
   using: node16
   main: main.js

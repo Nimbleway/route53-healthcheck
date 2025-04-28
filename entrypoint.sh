@@ -8,17 +8,31 @@ set -e
 USE_INGRESS="${USE_INGRESS:-true}"
 NAMESPACE="${NAMESPACE:-apm}"
 
-if [ -z "$PREFIX" ]; then
-echo "$PREFIX is not set"
-  if [ $USE_INGRESS = true ]; then
-    DOMAIN=`yq --raw-output '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\---' | head -n 1`
-  else
-    DOMAIN=`yq --raw-output '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
-  fi
+# If DOMAIN is directly provided, use it instead of extracting from CONFIG_FILE
+if [ -n "$DOMAIN" ]; then
+  echo "Using provided DOMAIN: $DOMAIN"
 else
-  echo "$PREFIX is set"
-  DOMAIN=`yq --raw-output $PREFIX "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
+  # Extract DOMAIN from CONFIG_FILE
+  if [ -z "$CONFIG_FILE" ]; then
+    echo "Error: Either DOMAIN or CONFIG_FILE must be provided"
+    exit 1
+  fi
+
+  if [ -z "$PREFIX" ]; then
+    echo "PREFIX is not set"
+    if [ $USE_INGRESS = true ]; then
+      DOMAIN=`yq --raw-output '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\---' | head -n 1`
+    else
+      DOMAIN=`yq --raw-output '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
+    fi
+  else
+    echo "PREFIX is set"
+    DOMAIN=`yq --raw-output $PREFIX "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
+  fi
+
+  echo "Using inferred DOMAIN: $DOMAIN"
 fi
+
 
 IS_HTTPS="${IS_HTTPS:-true}"
 if [ $IS_HTTPS = true ]; then
@@ -52,7 +66,7 @@ HEALTH_CHECK_ID=`aws route53 list-health-checks --query "HealthChecks[?HealthChe
 if [ -z "$HEALTH_CHECK_ID" ]
 then
  if [ $IS_HTTPS = true ]; then
-    echo "creating healthe check config for ${LB_IP} and ${DOMAIN}"
+    echo "creating healthcheck config for ${LB_IP} and ${DOMAIN}"
     echo "{
         \"IPAddress\": \"${LB_IP}\",
         \"Port\": ${PORT:-443},
@@ -68,7 +82,7 @@ then
     HCDate=$(date +"%d/%m/%Y_%H:%I:%M")
     aws route53 change-tags-for-resource --resource-type healthcheck --resource-id ${CLEAN_HEALTH_CHECK_ID} --add-tags Key=Name,Value=${CALLER_REFERENCE} Key=Date,Value="${HCDate}" Key=service,Value="${SERVICE_NAME}" Key=env,Value="${ENV}" Key=team,Value="${TEAM}"
  else
-    echo "creating healthe check config for ${LB_IP} and ${DOMAIN}"
+    echo "creating healthcheck config for ${LB_IP} and ${DOMAIN}"
     echo "{
         \"IPAddress\": \"${LB_IP}\",
         \"Port\": ${PORT:-443},
@@ -88,11 +102,13 @@ else
     CLEAN_HEALTH_CHECK_ID=`echo $HEALTH_CHECK_ID | sed s/\"//g`
 fi
 
-#echo "::set-output name=HEALTH_CHECK_ID::$HEALTH_CHECK_ID"
-sed -i 's|<DNS_IDENTIFIER>|'${CLEAN_HEALTH_CHECK_ID}'|' ${CONFIG_FILE}
+if [ -n "$CONFIG_FILE" ]; then
+  # Replace <DNS_IDENTIFIER> in the config file with the actual health check ID
+    sed -i 's|<DNS_IDENTIFIER>|'${CLEAN_HEALTH_CHECK_ID}'|' ${CONFIG_FILE}
+fi
 
+# Debugging output
+echo "HEALTH_CHECK_ID=$CLEAN_HEALTH_CHECK_ID"
 
-#cat ${CONFIG_FILE}
-#echo "HEALTH_CHECK_ID=$HEALTH_CHECK_ID" >> $GITHUB_ENV
-
-#echo $HEALTH_CHECK_ID
+# Set the output variable for GitHub Actions
+echo "HEALTH_CHECK_ID=$CLEAN_HEALTH_CHECK_ID" >> $GITHUB_OUTPUT

@@ -21,13 +21,13 @@ else
   if [ -z "$PREFIX" ]; then
     echo "PREFIX is not set"
     if [ $USE_INGRESS = true ]; then
-      DOMAIN=`yq --raw-output '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\---' | head -n 1`
+      DOMAIN=`yq -r '.spec.tls[0].hosts[0]' "${CONFIG_FILE}" | grep -v null | grep -v '\---' | head -n 1`
     else
-      DOMAIN=`yq --raw-output '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
+      DOMAIN=`yq -r '.metadata.annotations["external-dns.alpha.kubernetes.io/hostname"]' "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
     fi
   else
     echo "PREFIX is set"
-    DOMAIN=`yq --raw-output $PREFIX "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
+    DOMAIN=`yq -r $PREFIX "${CONFIG_FILE}" | grep -v 'null' | grep -v '\---' | head -n 1`
   fi
 
   echo "Using inferred DOMAIN: $DOMAIN"
